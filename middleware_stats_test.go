@@ -1,10 +1,11 @@
 package workers
 
 import (
+	"time"
+
 	"github.com/customerio/gospec"
 	. "github.com/customerio/gospec"
-	"github.com/garyburd/redigo/redis"
-	"time"
+	"github.com/gomodule/redigo/redis"
 )
 
 func MiddlewareStatsSpec(c gospec.Context) {

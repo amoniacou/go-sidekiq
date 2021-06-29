@@ -31,14 +31,14 @@ func ConfigSpec(c gospec.Context) {
 	})
 
 	c.Specify("can specify custom process", func() {
-		c.Expect(Config.processId, Equals, "1")
+		c.Expect(Config.ProcessId, Equals, "1")
 
 		Configure(map[string]string{
 			"server":  "localhost:6379",
 			"process": "2",
 		})
 
-		c.Expect(Config.processId, Equals, "2")
+		c.Expect(Config.ProcessId, Equals, "2")
 	})
 
 	c.Specify("requires a server parameter", func() {
@@ -86,5 +86,24 @@ func ConfigSpec(c gospec.Context) {
 		})
 
 		c.Expect(Config.PollInterval, Equals, 1)
+	})
+
+	c.Specify("defaults retry key to goretry", func() {
+		Configure(map[string]string{
+			"server":  "localhost:6379",
+			"process": "1",
+		})
+
+		c.Expect(Config.RetryKey, Equals, "goretry")
+	})
+
+	c.Specify("add 'retry' to the retry key", func() {
+		Configure(map[string]string{
+			"server":    "localhost:6379",
+			"process":   "1",
+			"retry_key": "retry",
+		})
+
+		c.Expect(Config.RetryKey, Equals, "retry")
 	})
 }

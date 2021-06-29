@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 )
 
 type Fetcher interface {
@@ -60,7 +60,7 @@ func (f *fetch) Fetch() {
 		for {
 			// f.Close() has been called
 			if f.Closed() {
-				break
+				return
 			}
 			<-f.Ready()
 			f.tryFetchMessage()
@@ -74,7 +74,7 @@ func (f *fetch) Fetch() {
 			close(f.closed)
 			// Signal to Close() that the fetcher has stopped
 			close(f.exit)
-			break
+			return
 		}
 	}
 }
@@ -152,5 +152,5 @@ func (f *fetch) inprogressMessages() []string {
 }
 
 func (f *fetch) inprogressQueue() string {
-	return fmt.Sprint(f.queue, ":", Config.processId, ":inprogress")
+	return fmt.Sprint(f.queue, ":", Config.ProcessId, ":inprogress")
 }

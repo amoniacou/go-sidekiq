@@ -8,7 +8,7 @@ import (
 type manager struct {
 	queue       string
 	fetch       Fetcher
-	job         jobFunc
+	job         JobFunc
 	concurrency int
 	workers     []*worker
 	workersM    *sync.Mutex
@@ -60,7 +60,7 @@ func (m *manager) manage() {
 			m.fetch.Acknowledge(message)
 		case <-m.stop:
 			m.exit <- true
-			break
+			return
 		}
 	}
 }
@@ -93,7 +93,7 @@ func (m *manager) reset() {
 	m.fetch = Config.Fetch(m.queue)
 }
 
-func newManager(queue string, job jobFunc, concurrency int, mids ...Action) *manager {
+func newManager(queue string, job JobFunc, concurrency int, mids ...Action) *manager {
 	var customMids *Middlewares
 	if len(mids) == 0 {
 		customMids = Middleware

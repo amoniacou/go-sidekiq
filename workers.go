@@ -28,7 +28,7 @@ var Middleware = NewMiddleware(
 	&MiddlewareStats{},
 )
 
-func Process(queue string, job jobFunc, concurrency int, mids ...Action) {
+func Process(queue string, job JobFunc, concurrency int, mids ...Action) {
 	access.Lock()
 	defer access.Unlock()
 
@@ -97,7 +97,7 @@ func StatsServer(port int) {
 
 func startSchedule() {
 	if schedule == nil {
-		schedule = newScheduled(RETRY_KEY, SCHEDULED_JOBS_KEY)
+		schedule = newScheduled(Config.RetryKey, Config.ScheduleKey)
 	}
 
 	schedule.start()

@@ -21,6 +21,28 @@ type EnqueueData struct {
 	EnqueueOptions
 }
 
+type EnqueueDataProxy EnqueueData
+
+func (e EnqueueData) MarshalJSON() ([]byte, error) {
+	o := e.EnqueueOptions
+	if e.EnqueueOptions.RetryCount > 0 {
+		s := struct {
+			EnqueueDataProxy
+			Retry      int     `json:"retry,omitempty"`
+			RetryCount int     `json:"retry_count"`
+			At         float64 `json:"at,omitempty"`
+		}{EnqueueDataProxy(e), o.RetryCount, 0, o.At}
+		return json.Marshal(s)
+	}
+
+	return json.Marshal(struct {
+		EnqueueDataProxy
+		RetryCount int     `json:"retry_count,omitempty"`
+		Retry      bool    `json:"retry,omitempty"`
+		At         float64 `json:"at,omitempty"`
+	}{EnqueueDataProxy(e), o.RetryCount, o.Retry, o.At})
+}
+
 type EnqueueOptions struct {
 	RetryCount int     `json:"retry_count,omitempty"`
 	Retry      bool    `json:"retry,omitempty"`
@@ -92,7 +114,7 @@ func enqueueAt(at float64, bytes []byte) error {
 
 	_, err := conn.Do(
 		"zadd",
-		Config.Namespace+SCHEDULED_JOBS_KEY, at, bytes,
+		Config.Namespace+Config.ScheduleKey, at, bytes,
 	)
 	if err != nil {
 		return err

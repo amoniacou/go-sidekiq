@@ -5,7 +5,7 @@ import (
 
 	"github.com/customerio/gospec"
 	. "github.com/customerio/gospec"
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 )
 
 func EnqueueSpec(c gospec.Context) {
@@ -72,8 +72,23 @@ func EnqueueSpec(c gospec.Context) {
 			c.Expect(ea, IsWithin(0.1), nowToSecondsWithNanoPrecision())
 		})
 
-		c.Specify("has retry and retry_count when set", func() {
-			EnqueueWithOptions("enqueue6", "Compare", []string{"foo", "bar"}, EnqueueOptions{RetryCount: 13, Retry: true})
+		c.Specify("sets retry count to `retry`", func() {
+			EnqueueWithOptions("enqueue6", "Compare", []string{"foo", "bar"}, EnqueueOptions{RetryCount: 13})
+
+			bytes, _ := redis.Bytes(conn.Do("lpop", "prod:queue:enqueue6"))
+			var result map[string]interface{}
+			json.Unmarshal(bytes, &result)
+			c.Expect(result["class"], Equals, "Compare")
+
+			retry := result["retry"].(float64)
+			c.Expect(retry, Equals, float64(13))
+
+			retryCount := result["retry_count"].(float64)
+			c.Expect(retryCount, Equals, float64(0))
+		})
+
+		c.Specify("sets Retry correctly when no count given", func() {
+			EnqueueWithOptions("enqueue6", "Compare", []string{"foo", "bar"}, EnqueueOptions{Retry: true})
 
 			bytes, _ := redis.Bytes(conn.Do("lpop", "prod:queue:enqueue6"))
 			var result map[string]interface{}
@@ -82,14 +97,11 @@ func EnqueueSpec(c gospec.Context) {
 
 			retry := result["retry"].(bool)
 			c.Expect(retry, Equals, true)
-
-			retryCount := int(result["retry_count"].(float64))
-			c.Expect(retryCount, Equals, 13)
 		})
 	})
 
 	c.Specify("EnqueueIn", func() {
-		scheduleQueue := "prod:" + SCHEDULED_JOBS_KEY
+		scheduleQueue := "prod:" + Config.ScheduleKey
 		conn := Config.Pool.Get()
 		defer conn.Close()
 
