@@ -47,7 +47,6 @@ func (r *MiddlewareRetry) Call(queue string, message *Msg, next func() bool) (ac
 					acknowledge = false
 				}
 			}
-
 			panic(e)
 		}
 	}()

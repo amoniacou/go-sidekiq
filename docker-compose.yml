@@ -1,0 +1,21 @@
+version: "3"
+volumes:
+  postgres-data:
+    driver: local
+services:
+  tests:
+    build:
+      context: .
+      dockerfile: test.Dockerfile
+    volumes:
+      - .:/go/src/github.com/amoniacou/go-sidekiq
+    links:
+      - redis
+    environment:
+      REDIS_URL: redis://redis:6379/1
+      REDIS_HOST: redis
+    command: go test -v ./...
+  redis:
+    image: "redis:5-alpine"
+    restart: always
+    command: redis-server --appendonly yes

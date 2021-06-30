@@ -2,6 +2,7 @@ package workers
 
 import (
 	"log"
+	"os"
 	"testing"
 
 	"github.com/customerio/gospec"
@@ -20,7 +21,7 @@ func TestAllSpecs(t *testing.T) {
 
 	r.BeforeEach = func() {
 		Configure(map[string]string{
-			"server":   "localhost:6379",
+			"server":   os.Getenv("REDIS_HOST") + ":6379",
 			"process":  "1",
 			"database": "15",
 			"pool":     "1",

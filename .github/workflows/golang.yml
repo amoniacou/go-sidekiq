@@ -29,4 +29,4 @@ jobs:
           golangci-lint run
           go test -v -p=1 -coverprofile=./cov.out ./...
         env:
-          REDIS_URL: redis://localhost:6379/1
+          REDIS_HOST: localhost
