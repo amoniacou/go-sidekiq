@@ -18,7 +18,7 @@ Example usage:
 package main
 
 import (
-	workers "github.com/amoniacou/go-sidekiq"
+	workers "github.com/amoniacou/go-sidekiq/v1"
 )
 
 func myJob(message *workers.Msg) {
