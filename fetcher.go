@@ -67,8 +67,8 @@ func (f *fetch) Fetch() {
 		}
 	}()
 
-	for {
-		select {
+	for { // nolint: gosimple
+		select { // nolint: gosimple
 		case <-f.stop:
 			// Stop the redis-polling goroutine
 			close(f.closed)
@@ -110,7 +110,10 @@ func (f *fetch) sendMessage(message string) {
 func (f *fetch) Acknowledge(message *Msg) {
 	conn := Config.Pool.Get()
 	defer conn.Close()
-	conn.Do("lrem", f.inprogressQueue(), -1, message.OriginalJson())
+	_, err := conn.Do("lrem", f.inprogressQueue(), -1, message.OriginalJson())
+	if err != nil {
+		Logger.Println("unable to do lrem: %v", err)
+	}
 }
 
 func (f *fetch) Messages() chan *Msg {

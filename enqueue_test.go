@@ -17,7 +17,8 @@ func EnqueueSpec(c gospec.Context) {
 		defer conn.Close()
 
 		c.Specify("makes the queue available", func() {
-			Enqueue("enqueue1", "Add", []int{1, 2})
+			_, err := Enqueue("enqueue1", "Add", []int{1, 2})
+			c.Expect(err, Equals, nil)
 
 			found, _ := redis.Bool(conn.Do("sismember", "prod:queues", "enqueue1"))
 			c.Expect(found, IsTrue)
@@ -27,18 +28,21 @@ func EnqueueSpec(c gospec.Context) {
 			nb, _ := redis.Int(conn.Do("llen", "prod:queue:enqueue2"))
 			c.Expect(nb, Equals, 0)
 
-			Enqueue("enqueue2", "Add", []int{1, 2})
+			_, err := Enqueue("enqueue2", "Add", []int{1, 2})
+			c.Expect(err, Equals, nil)
 
 			nb, _ = redis.Int(conn.Do("llen", "prod:queue:enqueue2"))
 			c.Expect(nb, Equals, 1)
 		})
 
 		c.Specify("saves the arguments", func() {
-			Enqueue("enqueue3", "Compare", []string{"foo", "bar"})
+			_, err := Enqueue("enqueue3", "Compare", []string{"foo", "bar"})
+			c.Expect(err, Equals, nil)
 
 			bytes, _ := redis.Bytes(conn.Do("lpop", "prod:queue:enqueue3"))
 			var result map[string]interface{}
-			json.Unmarshal(bytes, &result)
+			err = json.Unmarshal(bytes, &result)
+			c.Expect(err, Equals, nil)
 			c.Expect(result["class"], Equals, "Compare")
 
 			args := result["args"].([]interface{})
@@ -48,11 +52,13 @@ func EnqueueSpec(c gospec.Context) {
 		})
 
 		c.Specify("has a jid", func() {
-			Enqueue("enqueue4", "Compare", []string{"foo", "bar"})
+			_, err := Enqueue("enqueue4", "Compare", []string{"foo", "bar"})
+			c.Expect(err, Equals, nil)
 
 			bytes, _ := redis.Bytes(conn.Do("lpop", "prod:queue:enqueue4"))
 			var result map[string]interface{}
-			json.Unmarshal(bytes, &result)
+			err = json.Unmarshal(bytes, &result)
+			c.Expect(err, Equals, nil)
 			c.Expect(result["class"], Equals, "Compare")
 
 			jid := result["jid"].(string)
@@ -60,11 +66,13 @@ func EnqueueSpec(c gospec.Context) {
 		})
 
 		c.Specify("has enqueued_at that is close to now", func() {
-			Enqueue("enqueue5", "Compare", []string{"foo", "bar"})
+			_, err := Enqueue("enqueue5", "Compare", []string{"foo", "bar"})
+			c.Expect(err, Equals, nil)
 
 			bytes, _ := redis.Bytes(conn.Do("lpop", "prod:queue:enqueue5"))
 			var result map[string]interface{}
-			json.Unmarshal(bytes, &result)
+			err = json.Unmarshal(bytes, &result)
+			c.Expect(err, Equals, nil)
 			c.Expect(result["class"], Equals, "Compare")
 
 			ea := result["enqueued_at"].(float64)
@@ -72,31 +80,64 @@ func EnqueueSpec(c gospec.Context) {
 			c.Expect(ea, IsWithin(0.1), nowToSecondsWithNanoPrecision())
 		})
 
-		c.Specify("sets retry count to `retry`", func() {
-			EnqueueWithOptions("enqueue6", "Compare", []string{"foo", "bar"}, EnqueueOptions{RetryCount: 13})
+		c.Specify("has retry and retry_max when set", func() {
+			_, err := EnqueueWithOptions("enqueue6", "Compare", []string{"foo", "bar"}, EnqueueOptions{RetryMax: 13, Retry: true})
+			c.Expect(err, Equals, nil)
 
 			bytes, _ := redis.Bytes(conn.Do("lpop", "prod:queue:enqueue6"))
 			var result map[string]interface{}
-			json.Unmarshal(bytes, &result)
-			c.Expect(result["class"], Equals, "Compare")
-
-			retry := result["retry"].(float64)
-			c.Expect(retry, Equals, float64(13))
-
-			retryCount := result["retry_count"].(float64)
-			c.Expect(retryCount, Equals, float64(0))
-		})
-
-		c.Specify("sets Retry correctly when no count given", func() {
-			EnqueueWithOptions("enqueue6", "Compare", []string{"foo", "bar"}, EnqueueOptions{Retry: true})
-
-			bytes, _ := redis.Bytes(conn.Do("lpop", "prod:queue:enqueue6"))
-			var result map[string]interface{}
-			json.Unmarshal(bytes, &result)
+			err = json.Unmarshal(bytes, &result)
+			c.Expect(err, Equals, nil)
 			c.Expect(result["class"], Equals, "Compare")
 
 			retry := result["retry"].(bool)
 			c.Expect(retry, Equals, true)
+
+			retryMax := int(result["retry_max"].(float64))
+			c.Expect(retryMax, Equals, 13)
+		})
+
+		c.Specify("sets Retry correctly when no count given", func() {
+			_, err := EnqueueWithOptions("enqueue6", "Compare", []string{"foo", "bar"}, EnqueueOptions{Retry: true})
+			c.Expect(err, Equals, nil)
+
+			bytes, _ := redis.Bytes(conn.Do("lpop", "prod:queue:enqueue6"))
+			var result map[string]interface{}
+			err = json.Unmarshal(bytes, &result)
+			c.Expect(err, Equals, nil)
+			c.Expect(result["class"], Equals, "Compare")
+
+			retry := result["retry"].(bool)
+			c.Expect(retry, Equals, true)
+		})
+
+		c.Specify("has retry_options when set", func() {
+			_, err := EnqueueWithOptions(
+				"enqueue7", "Compare", []string{"foo", "bar"},
+				EnqueueOptions{
+					RetryMax: 13,
+					Retry:    true,
+					RetryOptions: RetryOptions{
+						Exp:      2,
+						MinDelay: 0,
+						MaxDelay: 60,
+						MaxRand:  30,
+					},
+				})
+			c.Expect(err, Equals, nil)
+
+			bytes, _ := redis.Bytes(conn.Do("lpop", "prod:queue:enqueue7"))
+			var result map[string]interface{}
+			err = json.Unmarshal(bytes, &result)
+			c.Expect(err, Equals, nil)
+			c.Expect(result["class"], Equals, "Compare")
+
+			retryOptions := result["retry_options"].(map[string]interface{})
+			c.Expect(len(retryOptions), Equals, 4)
+			c.Expect(retryOptions["exp"].(float64), Equals, float64(2))
+			c.Expect(retryOptions["min_delay"].(float64), Equals, float64(0))
+			c.Expect(retryOptions["max_delay"].(float64), Equals, float64(60))
+			c.Expect(retryOptions["max_rand"].(float64), Equals, float64(30))
 		})
 	})
 
@@ -112,7 +153,8 @@ func EnqueueSpec(c gospec.Context) {
 			scheduledCount, _ := redis.Int(conn.Do("zcard", scheduleQueue))
 			c.Expect(scheduledCount, Equals, 1)
 
-			conn.Do("del", scheduleQueue)
+			_, err = conn.Do("del", scheduleQueue)
+			c.Expect(err, Equals, nil)
 		})
 
 		c.Specify("has the correct 'queue'", func() {
@@ -121,12 +163,16 @@ func EnqueueSpec(c gospec.Context) {
 
 			var data EnqueueData
 			elem, err := conn.Do("zrange", scheduleQueue, 0, -1)
+			c.Expect(err, Equals, nil)
 			bytes, err := redis.Bytes(elem.([]interface{})[0], err)
-			json.Unmarshal(bytes, &data)
+			c.Expect(err, Equals, nil)
+			err = json.Unmarshal(bytes, &data)
+			c.Expect(err, Equals, nil)
 
 			c.Expect(data.Queue, Equals, "enqueuein2")
 
-			conn.Do("del", scheduleQueue)
+			_, err = conn.Do("del", scheduleQueue)
+			c.Expect(err, Equals, nil)
 		})
 	})
 

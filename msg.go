@@ -1,8 +1,9 @@
 package workers
 
 import (
-	"github.com/bitly/go-simplejson"
 	"reflect"
+
+	"github.com/bitly/go-simplejson"
 )
 
 type data struct {

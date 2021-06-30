@@ -25,7 +25,6 @@ type config struct {
 var Config *config
 
 func Configure(options map[string]string) {
-	var poolSize int
 	var namespace string
 	var pollInterval int
 	var retryKey string
@@ -55,7 +54,6 @@ func Configure(options map[string]string) {
 	}
 
 	scheduleKey = defaultScheduleJobsKey
-	poolSize, _ = strconv.Atoi(options["pool"])
 
 	Config = &config{
 		options["process"],
@@ -63,34 +61,40 @@ func Configure(options map[string]string) {
 		pollInterval,
 		retryKey,
 		scheduleKey,
-		&redis.Pool{
-			MaxIdle:     poolSize,
-			IdleTimeout: 240 * time.Second,
-			Dial: func() (redis.Conn, error) {
-				c, err := redis.Dial("tcp", options["server"])
-				if err != nil {
+		GetConnectionPool(options),
+		DefaultFetch,
+	}
+}
+
+func GetConnectionPool(options map[string]string) *redis.Pool {
+	poolSize, _ := strconv.Atoi(options["pool"])
+
+	return &redis.Pool{
+		MaxIdle:     poolSize,
+		IdleTimeout: 240 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial("tcp", options["server"])
+			if err != nil {
+				return nil, err
+			}
+			if options["password"] != "" {
+				if _, err := c.Do("AUTH", options["password"]); err != nil {
+					c.Close()
 					return nil, err
 				}
-				if options["password"] != "" {
-					if _, err := c.Do("AUTH", options["password"]); err != nil {
-						c.Close()
-						return nil, err
-					}
+			}
+			if options["database"] != "" {
+				if _, err := c.Do("SELECT", options["database"]); err != nil {
+					c.Close()
+					return nil, err
 				}
-				if options["database"] != "" {
-					if _, err := c.Do("SELECT", options["database"]); err != nil {
-						c.Close()
-						return nil, err
-					}
-				}
-				return c, err
-			},
-			TestOnBorrow: func(c redis.Conn, t time.Time) error {
-				_, err := c.Do("PING")
-				return err
-			},
+			}
+			return c, err
 		},
-		DefaultFetch,
+		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			_, err := c.Do("PING")
+			return err
+		},
 	}
 }
 

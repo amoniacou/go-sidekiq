@@ -1,0 +1,33 @@
+name: Go
+
+on: [push, repository_dispatch]
+
+jobs:
+  build:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:4-alpine
+        ports:
+          - 6379:6379
+    steps:
+      - name: Set up Go 1.16
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+        id: go
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Run tests
+        run: |
+          mkdir ./bin
+          export PATH=./bin:$PATH
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.40.1
+          golangci-lint run
+          go test -v -p=1 -coverprofile=./cov.out ./...
+        env:
+          GOFLAGS: -mod=vendor
+          REDIS_URL: redis://localhost:6379/1

@@ -22,9 +22,12 @@ func ScheduledSpec(c gospec.Context) {
 		message2, _ := NewMsg("{\"queue\":\"myqueue\",\"foo\":\"bar2\"}")
 		message3, _ := NewMsg("{\"queue\":\"default\",\"foo\":\"bar3\"}")
 
-		conn.Do("zadd", "prod:"+Config.RetryKey, now-60.0, message1.ToJson())
-		conn.Do("zadd", "prod:"+Config.RetryKey, now-10.0, message2.ToJson())
-		conn.Do("zadd", "prod:"+Config.RetryKey, now+60.0, message3.ToJson())
+		_, err := conn.Do("zadd", "prod:"+Config.RetryKey, now-60.0, message1.ToJson())
+		c.Expect(err, Equals, nil)
+		_, err = conn.Do("zadd", "prod:"+Config.RetryKey, now-10.0, message2.ToJson())
+		c.Expect(err, Equals, nil)
+		_, err = conn.Do("zadd", "prod:"+Config.RetryKey, now+60.0, message3.ToJson())
+		c.Expect(err, Equals, nil)
 
 		scheduled.poll()
 

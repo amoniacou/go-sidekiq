@@ -31,7 +31,8 @@ func FetchSpec(c gospec.Context) {
 			conn := Config.Pool.Get()
 			defer conn.Close()
 
-			conn.Do("lpush", "queue:fetchQueue2", message.ToJson())
+			_, err := conn.Do("lpush", "queue:fetchQueue2", message.ToJson())
+			c.Expect(err, Equals, nil)
 
 			fetch.Ready() <- true
 			message := <-fetch.Messages()
@@ -50,7 +51,8 @@ func FetchSpec(c gospec.Context) {
 			conn := Config.Pool.Get()
 			defer conn.Close()
 
-			conn.Do("lpush", "queue:fetchQueue3", message.ToJson())
+			_, err := conn.Do("lpush", "queue:fetchQueue3", message.ToJson())
+			c.Expect(err, Equals, nil)
 
 			fetch.Ready() <- true
 			<-fetch.Messages()
@@ -70,7 +72,8 @@ func FetchSpec(c gospec.Context) {
 			conn := Config.Pool.Get()
 			defer conn.Close()
 
-			conn.Do("lpush", "queue:fetchQueue4", message.ToJson())
+			_, err := conn.Do("lpush", "queue:fetchQueue4", message.ToJson())
+			c.Expect(err, Equals, nil)
 
 			fetch.Ready() <- true
 			<-fetch.Messages()
@@ -94,7 +97,8 @@ func FetchSpec(c gospec.Context) {
 			conn := Config.Pool.Get()
 			defer conn.Close()
 
-			conn.Do("lpush", "queue:fetchQueue5", json)
+			_, err := conn.Do("lpush", "queue:fetchQueue5", json)
+			c.Expect(err, Equals, nil)
 
 			fetch.Ready() <- true
 			<-fetch.Messages()
@@ -114,9 +118,12 @@ func FetchSpec(c gospec.Context) {
 			conn := Config.Pool.Get()
 			defer conn.Close()
 
-			conn.Do("lpush", "queue:fetchQueue6:1:inprogress", message.ToJson())
-			conn.Do("lpush", "queue:fetchQueue6:1:inprogress", message2.ToJson())
-			conn.Do("lpush", "queue:fetchQueue6", message3.ToJson())
+			_, err := conn.Do("lpush", "queue:fetchQueue6:1:inprogress", message.ToJson())
+			c.Expect(err, Equals, nil)
+			_, err = conn.Do("lpush", "queue:fetchQueue6:1:inprogress", message2.ToJson())
+			c.Expect(err, Equals, nil)
+			_, err = conn.Do("lpush", "queue:fetchQueue6", message3.ToJson())
+			c.Expect(err, Equals, nil)
 
 			fetch := buildFetch("fetchQueue6")
 

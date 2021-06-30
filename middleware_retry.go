@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/rand"
@@ -25,9 +26,10 @@ func (r *MiddlewareRetry) Call(queue string, message *Msg, next func() bool) (ac
 				message.Set("error_message", fmt.Sprintf("%v", e))
 				retryCount := incrementRetry(message)
 
+				retryOptions, _ := message.Get("retry_options").Map()
 				waitDuration := durationToSecondsWithNanoPrecision(
 					time.Duration(
-						secondsToDelay(retryCount),
+						secondsToDelay(retryCount, retryOptions),
 					) * time.Second,
 				)
 
@@ -61,9 +63,13 @@ func retry(message *Msg) bool {
 
 	if param, err := message.Get("retry").Bool(); err == nil {
 		retry = param
-	} else if param, err := message.Get("retry").Int(); err == nil {
+	} else if param, err := message.Get("retry").Int(); err == nil { // compatible with sidekiq
 		max = param
 		retry = true
+	}
+
+	if param, err := message.Get("retry_max").Int(); err == nil {
+		max = param
 	}
 
 	count, _ := message.Get("retry_count").Int()
@@ -86,7 +92,38 @@ func incrementRetry(message *Msg) (retryCount int) {
 	return
 }
 
-func secondsToDelay(count int) int {
-	power := math.Pow(float64(count), 4)
-	return int(power) + 15 + (rand.Intn(30) * (count + 1))
+func secondsToDelay(count int, retryOptions map[string]interface{}) int {
+	exp := float64(4)
+	minDelay := float64(15)
+	maxDelay := math.Inf(1)
+	maxRand := float64(30)
+	if retryOptions != nil {
+		if v, ok := retryOptions["exp"].(json.Number); ok {
+			if v2, err := v.Float64(); err == nil {
+				exp = v2
+			}
+		}
+		if v, ok := retryOptions["min_delay"].(json.Number); ok {
+			if v2, err := v.Float64(); err == nil {
+				minDelay = v2
+			}
+		}
+		if v, ok := retryOptions["max_delay"].(json.Number); ok {
+			if v2, err := v.Float64(); err == nil {
+				maxDelay = v2
+			}
+		}
+		if v, ok := retryOptions["max_rand"].(json.Number); ok {
+			if v2, err := v.Float64(); err == nil {
+				maxRand = v2
+			}
+		}
+	}
+
+	power := math.Pow(float64(count), exp)
+	randN := 0
+	if maxRand > 0 {
+		randN = rand.Intn(int(maxRand)) // nolint: gosec
+	}
+	return int(math.Min(power+minDelay+float64(randN*(count+1)), maxDelay))
 }

@@ -22,7 +22,8 @@ func WorkersSpec(c gospec.Context) {
 
 			Start()
 
-			Enqueue("myqueue", "Add", []int{1, 2})
+			_, err := Enqueue("myqueue", "Add", []int{1, 2})
+			c.Expect(err, Equals, nil)
 			<-called
 
 			Quit()

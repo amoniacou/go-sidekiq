@@ -27,9 +27,18 @@ func incrementStats(metric string) {
 
 	today := time.Now().UTC().Format("2006-01-02")
 
-	conn.Send("multi")
-	conn.Send("incr", Config.Namespace+"stat:"+metric)
-	conn.Send("incr", Config.Namespace+"stat:"+metric+":"+today)
+	err := conn.Send("multi")
+	if err != nil {
+		Logger.Println("couldn't send multi:", err)
+	}
+	err = conn.Send("incr", Config.Namespace+"stat:"+metric)
+	if err != nil {
+		Logger.Println("could not incr stat:", err)
+	}
+	err = conn.Send("incr", Config.Namespace+"stat:"+metric+":"+today)
+	if err != nil {
+		Logger.Println("could not incr stat for today:", err)
+	}
 
 	if _, err := conn.Do("exec"); err != nil {
 		Logger.Println("couldn't save stats:", err)

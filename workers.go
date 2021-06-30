@@ -18,7 +18,6 @@ var Logger WorkersLogger = log.New(os.Stdout, "workers: ", log.Ldate|log.Lmicros
 
 var managers = make(map[string]*manager)
 var schedule *scheduled
-var control = make(map[string]chan string)
 var access sync.Mutex
 var started bool
 

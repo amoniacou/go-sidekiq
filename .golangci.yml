@@ -1,0 +1,12 @@
+linters:
+  enable:
+    - megacheck
+    - govet
+    - gosec
+    - dupl
+    - unparam
+  presets:
+    - bugs
+    - unused
+    - performance
+  fast: false

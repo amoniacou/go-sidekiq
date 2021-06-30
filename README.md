@@ -18,7 +18,7 @@ Example usage:
 package main
 
 import (
-	"github.com/jrallison/go-workers"
+	"github.com/amoniacou/go-sidekiq"
 )
 
 func myJob(message *workers.Msg) {
@@ -34,7 +34,7 @@ func (r *myMiddleware) Call(queue string, message *workers.Msg, next func() bool
   acknowledge = next()
   // do something after each message is processed
   return
-} 
+}
 
 func main() {
   workers.Configure(map[string]string{
@@ -61,6 +61,18 @@ func main() {
 
   // Add a job to a queue with retry
   workers.EnqueueWithOptions("myqueue3", "Add", []int{1, 2}, workers.EnqueueOptions{Retry: true})
+
+  // Add a job to a queue in a different redis instance
+  workers.EnqueueWithOptions("myqueue4", "Add", []int{1, 2},
+		workers.EnqueueOptions{
+			Retry: true,
+			ConnectionOptions: map[string]string{
+				"server":   "localhost:6378",
+				"database": "my-database",
+				"pool":     "10",
+				"password": "pass",
+			}},
+	)
 
   // stats will be available at http://localhost:8080/stats
   go workers.StatsServer(8080)

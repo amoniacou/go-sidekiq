@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"log"
 	"testing"
 
 	"github.com/customerio/gospec"
@@ -26,7 +27,10 @@ func TestAllSpecs(t *testing.T) {
 		})
 
 		conn := Config.Pool.Get()
-		conn.Do("flushdb")
+		_, err := conn.Do("flushdb")
+		if err != nil {
+			log.Fatalf("Unable to flush db: %v", err)
+		}
 		conn.Close()
 	}
 

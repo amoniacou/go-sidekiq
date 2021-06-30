@@ -58,7 +58,7 @@ func (w *worker) process(message *Msg) (acknowledge bool) {
 	acknowledge = true
 
 	defer func() {
-		recover()
+		recover() // nolint: errcheck
 	}()
 
 	return w.manager.mids.call(w.manager.queueName(), message, func() {
