@@ -27,6 +27,7 @@ jobs:
           export PATH=./bin:$PATH
           curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.40.1
           golangci-lint run
+          go mod vendor
           go test -v -p=1 -coverprofile=./cov.out ./...
         env:
           GOFLAGS: -mod=vendor
